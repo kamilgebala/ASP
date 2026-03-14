@@ -1,7 +1,3 @@
-using AppCore.Repositories;
-using AppCore.ValueObject;
-using Infrastructure.Memory;
-
 namespace WebApi;
 
 public class Program
@@ -15,7 +11,6 @@ public class Program
 
         // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
         builder.Services.AddOpenApi();
-        builder.Services.AddScoped<ICarRepository, MemoryCarRepository>();
 
         var app = builder.Build();
 
@@ -28,12 +23,6 @@ public class Program
         app.UseHttpsRedirection();
 
         app.UseAuthorization();
-
-        app.MapGet("/api/cars/{plateNumber}", (ICarRepository repository, string plateNumber, HttpContext httpContext) =>
-            {
-                return repository.FindByPlateNumber(plateNumber);
-            })
-            .WithName("GetCar");
 
         app.Run();
     }
