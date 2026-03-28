@@ -10,8 +10,4 @@
       <ProjectReference Include="..\CoreApp\CoreApp.csproj" />
     </ItemGroup>
 
-    <ItemGroup>
-      <Folder Include="Memory\" />
-    </ItemGroup>
-
 </Project>

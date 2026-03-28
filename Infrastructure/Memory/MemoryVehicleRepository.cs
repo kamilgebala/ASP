@@ -3,7 +3,7 @@ using CoreApp.Repositories;
 
 namespace Infrastructure.Memory;
 
-public class InMemoryVehicleRepository : MemoryGenericRepository<Vehicle>, IVehicleRepository
+public class MemoryVehicleRepository : MemoryGenericRepository<Vehicle>, IVehicleRepository
 {
     public Task<Vehicle?> FindByLicensePlateAsync(string licensePlate)
     {
