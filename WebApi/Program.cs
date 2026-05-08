@@ -1,3 +1,4 @@
+using CoreApp.Module;
 using CoreApp.Repositories;
 using CoreApp.Services;
 using Infrastructure.Memory;
@@ -12,6 +13,7 @@ public class Program
         var builder = WebApplication.CreateBuilder(args);
 
         // Add services to the container.
+        builder.Services.AddAppCoreModule(builder.Configuration);
         builder.Services.AddControllers();
         builder.Services.AddAuthorization();
 

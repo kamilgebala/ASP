@@ -29,3 +29,8 @@ public record CreateGateDto(
         };
     }
 };
+
+public record UpdateGateDto(
+    string Name,
+    string Type
+);

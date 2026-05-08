@@ -1,4 +1,4 @@
-﻿using CoreApp.Dto;
+using CoreApp.Dto;
 using CoreApp.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -28,6 +28,16 @@ public class GatesController(IParkingGateService service) : ControllerBase
     {
         var created = await service.CreateAsync(dto);
         return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+    }
+
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> UpdateGate(Guid id, [FromBody] UpdateGateDto dto)
+    {
+        var gate = await service.GetByIdAsync(id);
+        if (gate is null)
+            return NotFound();
+        var updated = await service.UpdateAsync(id, dto);
+        return Ok(updated);
     }
 
     [HttpPatch("{id:guid}/status")]

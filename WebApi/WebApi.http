@@ -1,6 +1,54 @@
 @WebApi_HostAddress = http://localhost:5084
 
-GET {{WebApi_HostAddress}}/weatherforecast/
+### Get All Paged
+GET {{WebApi_HostAddress}}/api/gates?page=1&size=10
+Accept: application/json
+
+###
+
+### Get One By ID
+GET {{WebApi_HostAddress}}/api/gates/00000000-0000-0000-0000-000000000000
+Accept: application/json
+
+###
+
+### Create
+POST {{WebApi_HostAddress}}/api/gates
+Content-Type: application/json
+
+{
+  "name": "Gate AB",
+  "type": "Entry",
+  "location": "North Side"
+}
+
+###
+
+### Create (Invalid input data)
+POST {{WebApi_HostAddress}}/api/gates
+Content-Type: application/json
+
+{
+  "name": "",
+  "type": "InvalidType",
+  "location": "North Side"
+}
+
+###
+
+### Update
+PUT {{WebApi_HostAddress}}/api/gates/00000000-0000-0000-0000-000000000000
+Content-Type: application/json
+
+{
+  "name": "Updated Gate",
+  "type": "Exit"
+}
+
+###
+
+### Change status
+PATCH {{WebApi_HostAddress}}/api/gates/00000000-0000-0000-0000-000000000000/status?isOperational=true
 Accept: application/json
 
 ###

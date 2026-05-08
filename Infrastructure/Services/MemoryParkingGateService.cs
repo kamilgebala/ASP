@@ -1,4 +1,5 @@
-﻿using CoreApp.Dto;
+using CoreApp.Dto;
+using CoreApp.Enums;
 using CoreApp.Repositories;
 using CoreApp.Services;
 
@@ -33,6 +34,17 @@ public class MemoryParkingGateService(IParkingUnitOfWork unit) : IParkingGateSer
     {
         var entity = dto.ToEntity();
         await unit.Gates.AddAsync(entity);
+        await unit.SaveChangesAsync();
+        return (ParkingGateDto)entity;
+    }
+
+    public async Task<ParkingGateDto> UpdateAsync(Guid id, UpdateGateDto dto)
+    {
+        var entity = await unit.Gates.FindByIdAsync(id)
+                     ?? throw new KeyNotFoundException($"ParkingGate with id '{id}' not found.");
+        entity.Name = dto.Name;
+        entity.Type = Enum.Parse<GateType>(dto.Type);
+        await unit.Gates.UpdateAsync(entity);
         await unit.SaveChangesAsync();
         return (ParkingGateDto)entity;
     }
