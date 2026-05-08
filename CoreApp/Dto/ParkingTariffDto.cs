@@ -1,3 +1,5 @@
+using CoreApp.Entities;
+
 namespace CoreApp.Dto;
 
 public record ParkingTariffDto(
@@ -14,4 +16,14 @@ public record CreateTariffDto(
     int FreeMinutes,
     decimal HourlyRate,
     decimal DailyMaxRate
-);
+)
+{
+    public ParkingTariff ToEntity() => new()
+    {
+        Name = Name,
+        FreeParkingDuration = TimeSpan.FromMinutes(FreeMinutes),
+        HourlyRate = HourlyRate,
+        DailyMaxRate = DailyMaxRate,
+        IsActive = false
+    };
+};

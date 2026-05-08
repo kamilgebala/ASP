@@ -22,4 +22,18 @@ public class GatesController(IParkingGateService service) : ControllerBase
             return NotFound();
         return Ok(gate);
     }
+
+    [HttpPost]
+    public async Task<IActionResult> CreateGate([FromBody] CreateGateDto dto)
+    {
+        var created = await service.CreateAsync(dto);
+        return CreatedAtAction(nameof(GetById), new { id = created.Id }, created);
+    }
+
+    [HttpPatch("{id:guid}/status")]
+    public async Task<IActionResult> ChangeStatus(Guid id, [FromQuery] bool isOperational)
+    {
+        var updated = await service.ChangeOperationalStatusAsync(id, isOperational);
+        return Ok(updated);
+    }
 }
