@@ -1,9 +1,21 @@
+using CoreApp.Enums;
+
 namespace CoreApp.Dto;
 
-public record CameraCaptureDto(
+public record CreateCameraCaptureDto(
     string LicensePlate,
-    string Brand,
-    string Color,
-    string GateName,
-    string? ImagePath = null
+    string DetectedBrand,
+    string DetectedColor,
+    CaptureType Type,
+    string ImagePath = ""
+);
+
+public record CameraCaptureDto(
+    Guid Id,
+    string LicensePlate,
+    string DetectedBrand,
+    string DetectedColor,
+    CaptureType Type,
+    string ImagePath,
+    DateTime CapturedAt
 );

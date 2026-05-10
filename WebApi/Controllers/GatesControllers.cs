@@ -10,17 +10,13 @@ public class GatesController(IParkingGateService service) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAllGates([FromQuery] int page = 1, [FromQuery] int size = 10)
-    {
-        return Ok(await service.GetAllAsync(page, size));
-    }
+        => Ok(await service.GetAllAsync(page, size));
 
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> GetById(Guid id)
     {
         var gate = await service.GetByIdAsync(id);
-        if (gate is null)
-            return NotFound();
-        return Ok(gate);
+        return gate is null ? NotFound() : Ok(gate);
     }
 
     [HttpPost]
@@ -34,16 +30,37 @@ public class GatesController(IParkingGateService service) : ControllerBase
     public async Task<IActionResult> UpdateGate(Guid id, [FromBody] UpdateGateDto dto)
     {
         var gate = await service.GetByIdAsync(id);
-        if (gate is null)
-            return NotFound();
-        var updated = await service.UpdateAsync(id, dto);
-        return Ok(updated);
+        if (gate is null) return NotFound();
+        return Ok(await service.UpdateAsync(id, dto));
     }
 
     [HttpPatch("{id:guid}/status")]
     public async Task<IActionResult> ChangeStatus(Guid id, [FromQuery] bool isOperational)
+        => Ok(await service.ChangeOperationalStatusAsync(id, isOperational));
+
+    [HttpPost("{gateId:guid}/captures")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> AddCameraCapture(
+        [FromRoute] Guid gateId,
+        [FromBody] CreateCameraCaptureDto dto)
     {
-        var updated = await service.ChangeOperationalStatusAsync(id, isOperational);
-        return Ok(updated);
+        var capture = await service.AddCaptureAsync(gateId, dto);
+        return CreatedAtAction(nameof(GetCaptures), new { gateId }, capture);
+    }
+
+    [HttpGet("{gateId:guid}/captures")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetCaptures([FromRoute] Guid gateId)
+        => Ok(await service.GetCapturesAsync(gateId));
+
+    [HttpDelete("{gateId:guid}/captures/{captureId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> RemoveCapture([FromRoute] Guid gateId, [FromRoute] Guid captureId)
+    {
+        await service.RemoveCaptureAsync(gateId, captureId);
+        return NoContent();
     }
 }

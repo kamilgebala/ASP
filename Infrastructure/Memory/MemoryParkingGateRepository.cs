@@ -1,4 +1,4 @@
-﻿using CoreApp.Entities;
+using CoreApp.Entities;
 using CoreApp.Enums;
 using CoreApp.Repositories;
 
@@ -14,7 +14,7 @@ public class MemoryParkingGateRepository : MemoryGenericRepository<ParkingGate>,
             Name = "Entry Gate",
             Type = GateType.Entry,
             Location = "Main Gate",
-            IsOperational = false
+            IsOperational = true
         };
         _data.Add(gate1.Id, gate1);
 
@@ -34,5 +34,11 @@ public class MemoryParkingGateRepository : MemoryGenericRepository<ParkingGate>,
         var result = _data.Values
             .FirstOrDefault(g => g.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
         return Task.FromResult(result);
+    }
+
+    public Task<ParkingGate?> FindByIdWithCapturesAsync(Guid id)
+    {
+        _data.TryGetValue(id, out var gate);
+        return Task.FromResult(gate);
     }
 }
