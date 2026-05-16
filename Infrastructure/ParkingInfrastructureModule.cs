@@ -55,6 +55,7 @@ public static class ParkingInfrastructureModule
 
         services.AddScoped<IParkingUnitOfWork, EfParkingUnitOfWork>();
         services.AddScoped<IParkingGateService, ParkingGateService>();
+        services.AddScoped<IParkingEmployeeService, ParkingEmployeeService>();
         services.AddScoped<IAuthService, AuthService>();
 
         services.AddScoped<IDataSeeder, IdentityDbSeeder>();
