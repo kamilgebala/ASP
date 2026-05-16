@@ -1,5 +1,6 @@
 using CoreApp.Dto;
 using CoreApp.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace WebApi.Controllers;
@@ -9,6 +10,7 @@ namespace WebApi.Controllers;
 public class GatesController(IParkingGateService service) : ControllerBase
 {
     [HttpGet]
+    [Authorize(Policy = "AdminOnly")]
     public async Task<IActionResult> GetAllGates([FromQuery] int page = 1, [FromQuery] int size = 10)
         => Ok(await service.GetAllAsync(page, size));
 

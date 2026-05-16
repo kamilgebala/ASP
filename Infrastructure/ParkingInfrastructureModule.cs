@@ -1,13 +1,21 @@
+using CoreApp.Authorization;
+using CoreApp.Enums;
 using CoreApp.Repositories;
 using CoreApp.Services;
 using Infrastructure.EntityFramework.Context;
+using Infrastructure.EntityFramework.Entities;
 using Infrastructure.EntityFramework.Repositories;
 using Infrastructure.EntityFramework.UnitOfWork;
 using Infrastructure.Memory;
+using Infrastructure.Security;
 using Infrastructure.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.IdentityModel.Tokens;
 
 namespace Infrastructure;
 
@@ -19,6 +27,19 @@ public static class ParkingInfrastructureModule
     {
         services.AddDbContext<ParkingDbContext>(options =>
             options.UseSqlite(configuration.GetConnectionString("ParkingDb")));
+
+        services.AddIdentity<AppUser, AppRole>(options =>
+            {
+                options.Password.RequiredLength = 8;
+                options.Password.RequireUppercase = true;
+                options.Password.RequireNonAlphanumeric = true;
+                options.User.RequireUniqueEmail = true;
+                options.SignIn.RequireConfirmedEmail = true;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+            })
+            .AddEntityFrameworkStores<ParkingDbContext>()
+            .AddDefaultTokenProviders();
 
         services.AddScoped<EfParkingGateRepository>();
         services.AddScoped<EfParkingSessionRepository>();
@@ -34,6 +55,58 @@ public static class ParkingInfrastructureModule
 
         services.AddScoped<IParkingUnitOfWork, EfParkingUnitOfWork>();
         services.AddScoped<IParkingGateService, ParkingGateService>();
+        services.AddScoped<IAuthService, AuthService>();
+
+        services.AddScoped<IDataSeeder, IdentityDbSeeder>();
+        services.AddScoped<IDataSeeder, ParkingDataSeeder>();
+
+        return services;
+    }
+
+    public static IServiceCollection AddJwt(
+        this IServiceCollection services,
+        JwtSettings jwtSettings)
+    {
+        services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new TokenValidationParameters
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateLifetime = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidIssuer = jwtSettings.Issuer,
+                    ValidAudience = jwtSettings.Audience,
+                    IssuerSigningKey = jwtSettings.GetSymmetricKey(),
+                    ClockSkew = TimeSpan.Zero
+                };
+            });
+
+        services.AddAuthorization(options =>
+        {
+            options.AddPolicy(AppPolicies.AdminOnly.Name(), policy =>
+                policy.RequireRole(UserRole.Administrator.ToString()));
+
+            options.AddPolicy(AppPolicies.ParkingEmployeeOnly.Name(), policy =>
+                policy.RequireRole(
+                    UserRole.ParkingEmployee.ToString(),
+                    UserRole.Administrator.ToString()));
+
+            options.AddPolicy(AppPolicies.ActiveUser.Name(), policy =>
+                policy.RequireAuthenticatedUser()
+                    .RequireClaim("status", SystemUserStatus.Active.ToString()));
+
+            options.DefaultPolicy = new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser().Build();
+
+            options.FallbackPolicy = new AuthorizationPolicyBuilder()
+                .RequireAuthenticatedUser().Build();
+        });
 
         return services;
     }

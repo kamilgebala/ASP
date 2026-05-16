@@ -1,6 +1,7 @@
 using CoreApp.Entities;
 using CoreApp.Enums;
 using Infrastructure.EntityFramework.Entities;
+using Infrastructure.Security;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
@@ -13,6 +14,7 @@ public class ParkingDbContext : IdentityDbContext<AppUser, AppRole, string>
     public DbSet<Vehicle> Vehicles { get; set; }
     public DbSet<CameraCapture> Captures { get; set; }
     public DbSet<ParkingTariff> Tariffs { get; set; }
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
 
     public ParkingDbContext() { }
 
@@ -85,6 +87,14 @@ public class ParkingDbContext : IdentityDbContext<AppUser, AppRole, string>
             e.Property(t => t.Name).HasMaxLength(50).IsRequired();
             e.Property(t => t.FreeParkingDuration)
                 .HasConversion(v => v.Ticks, v => TimeSpan.FromTicks(v));
+        });
+
+        builder.Entity<RefreshToken>(e =>
+        {
+            e.HasKey(t => t.Id);
+            e.Property(t => t.Token).HasMaxLength(256).IsRequired();
+            e.Property(t => t.UserId).HasMaxLength(450).IsRequired();
+            e.HasIndex(t => t.Token).IsUnique();
         });
     }
 }
