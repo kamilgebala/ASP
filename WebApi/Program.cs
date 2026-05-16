@@ -6,7 +6,7 @@ using WebApi.Exceptions;
 
 namespace WebApi;
 
-public class Program
+public partial class Program
 {
     public static async Task Main(string[] args)
     {
@@ -27,6 +27,8 @@ public class Program
         {
             app.MapOpenApi();
             using var scope = app.Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<Infrastructure.EntityFramework.Context.ParkingDbContext>();
+            context.Database.EnsureCreated();
             var seeders = scope.ServiceProvider
                 .GetServices<IDataSeeder>()
                 .OrderBy(s => s.Order);
@@ -42,3 +44,5 @@ public class Program
         app.Run();
     }
 }
+
+public partial class Program { }
