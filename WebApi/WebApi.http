@@ -1,54 +1,204 @@
-@WebApi_HostAddress = http://localhost:5084
+@host = http://localhost:5084
 
-### Get All Paged
-GET {{WebApi_HostAddress}}/api/gates?page=1&size=10
-Accept: application/json
+# ID bramek z ParkingDataSeeder
+@gateEntryMainId = 10000000-0000-0000-0000-000000000001
+@gateExitMainId  = 10000000-0000-0000-0000-000000000002
+@gateEntrySideId = 10000000-0000-0000-0000-000000000003
+@gateExitSideId  = 10000000-0000-0000-0000-000000000004
 
-###
+# ID przykładowych aktywnych sesji (Active1/2/3)
+@activeSession1 = 40000000-0000-0000-0000-000000000001
+@activeSession2 = 40000000-0000-0000-0000-000000000002
 
-### Get One By ID
-GET {{WebApi_HostAddress}}/api/gates/00000000-0000-0000-0000-000000000000
-Accept: application/json
+# Tokeny — po wykonaniu /api/auth/login wklej accessToken / refreshToken w odpowiednie pola
+@accessToken = WKLEJ_TOKEN
+@refreshToken = WKLEJ_REFRESH_TOKEN
 
-###
+############################################################
+# AUTH                                                     #
+############################################################
 
-### Create
-POST {{WebApi_HostAddress}}/api/gates
+### Login Admin
+POST {{host}}/api/auth/login
 Content-Type: application/json
 
 {
-  "name": "Gate AB",
-  "type": "Entry",
-  "location": "North Side"
+  "email": "admin@parking.pl",
+  "password": "Admin@123!"
 }
 
-###
-
-### Create (Invalid input data)
-POST {{WebApi_HostAddress}}/api/gates
+### Login Pracownik (Jan)
+POST {{host}}/api/auth/login
 Content-Type: application/json
+
+{
+  "email": "jan.kowalski@parking.pl",
+  "password": "Employee@123!"
+}
+
+### Login Pracownik (Anna)
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "anna.nowak@parking.pl",
+  "password": "Employee@123!"
+}
+
+### Login Kierowca
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "piotr.kierowca@parking.pl",
+  "password": "Driver@123!"
+}
+
+### Login – błędne hasło (oczekiwane 401)
+POST {{host}}/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "jan.kowalski@parking.pl",
+  "password": "ZleHaslo!"
+}
+
+### Refresh
+POST {{host}}/api/auth/refresh
+Content-Type: application/json
+
+{
+  "accessToken": "{{accessToken}}",
+  "refreshToken": "{{refreshToken}}"
+}
+
+### Wylogowanie (revoke)
+POST {{host}}/api/auth/revoke
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+"{{refreshToken}}"
+
+### Profil zalogowanego użytkownika
+GET {{host}}/api/auth/me
+Authorization: Bearer {{accessToken}}
+
+############################################################
+# GATES — bramki parkingowe (admin)                        #
+############################################################
+
+### Lista bramek (paged)
+GET {{host}}/api/gates?page=1&size=10
+Accept: application/json
+Authorization: Bearer {{accessToken}}
+
+### Bramka po ID
+GET {{host}}/api/gates/{{gateEntryMainId}}
+Accept: application/json
+Authorization: Bearer {{accessToken}}
+
+### Utworzenie bramki
+POST {{host}}/api/gates
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "name": "Wjazd Testowy",
+  "type": "Entry",
+  "location": "Lokalizacja testowa"
+}
+
+### Utworzenie – błędne dane (oczekiwane 400)
+POST {{host}}/api/gates
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
 
 {
   "name": "",
-  "type": "InvalidType",
-  "location": "North Side"
+  "type": "ZlyTyp",
+  "location": "Test"
 }
 
-###
-
-### Update
-PUT {{WebApi_HostAddress}}/api/gates/00000000-0000-0000-0000-000000000000
+### Aktualizacja bramki
+PUT {{host}}/api/gates/{{gateEntryMainId}}
 Content-Type: application/json
+Authorization: Bearer {{accessToken}}
 
 {
-  "name": "Updated Gate",
-  "type": "Exit"
+  "name": "Wjazd Zmieniony",
+  "type": "Entry"
 }
 
-###
+### Zmiana statusu (operacyjna / wyłączona)
+PATCH {{host}}/api/gates/{{gateEntryMainId}}/status?isOperational=true
+Authorization: Bearer {{accessToken}}
 
-### Change status
-PATCH {{WebApi_HostAddress}}/api/gates/00000000-0000-0000-0000-000000000000/status?isOperational=true
-Accept: application/json
+############################################################
+# GATES — captures (zdjęcia z kamer; pracownik lub admin)  #
+############################################################
 
-###
+### Dodaj capture
+POST {{host}}/api/gates/{{gateEntryMainId}}/captures
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "licensePlate": "KR99999",
+  "detectedBrand": "Toyota",
+  "detectedColor": "Czerwony",
+  "type": "Entry",
+  "imagePath": "/captures/test.jpg"
+}
+
+### Lista captures dla bramki
+GET {{host}}/api/gates/{{gateEntryMainId}}/captures
+Authorization: Bearer {{accessToken}}
+
+### Usuń capture (autor lub admin)
+DELETE {{host}}/api/gates/{{gateEntryMainId}}/captures/50000000-0000-0000-0000-000000000001
+Authorization: Bearer {{accessToken}}
+
+############################################################
+# EMPLOYEE — API pracownika parkingu (Zadanie 23)          #
+############################################################
+
+### Aktywne sesje
+GET {{host}}/api/employee/sessions/active
+Authorization: Bearer {{accessToken}}
+
+### Wyszukiwanie po numerze rejestracyjnym
+GET {{host}}/api/employee/sessions/search?plate=KR12345
+Authorization: Bearer {{accessToken}}
+
+### Ręczna rejestracja wjazdu
+POST {{host}}/api/employee/sessions/entry
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "licensePlate": "KR55555",
+  "brand": "Audi",
+  "color": "Czarny",
+  "gateId": "{{gateEntryMainId}}",
+  "note": "Awaria kamery wjazdowej"
+}
+
+### Ręczna rejestracja wyjazdu (naliczenie opłaty)
+POST {{host}}/api/employee/sessions/{{activeSession1}}/exit
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+{
+  "gateId": "{{gateExitMainId}}",
+  "note": "Wyjazd ręczny"
+}
+
+### Zamknięcie sesji bez opłaty (reklamacja / interwencja)
+POST {{host}}/api/employee/sessions/{{activeSession2}}/close-free
+Content-Type: application/json
+Authorization: Bearer {{accessToken}}
+
+"Reklamacja klienta – uszkodzony szlaban"
+
+### Próba dostępu bez tokenu (oczekiwane 401)
+GET {{host}}/api/employee/sessions/active

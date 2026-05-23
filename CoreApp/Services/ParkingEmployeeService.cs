@@ -10,17 +10,10 @@ public class ParkingEmployeeService(IParkingUnitOfWork unit) : IParkingEmployeeS
     public async Task<IEnumerable<ActiveSessionDto>> GetActiveSessionsAsync()
     {
         var sessions = await unit.Sessions.FindAllActiveAsync();
-        return sessions.Select(s => new ActiveSessionDto(
-            s.Id,
-            s.Vehicle.LicensePlate,
-            s.Vehicle.Brand,
-            s.Vehicle.Color,
-            s.GateName,
-            s.EntryTime,
-            (int)(DateTime.UtcNow - s.EntryTime).TotalMinutes));
+        return sessions.Select(ToActiveDto);
     }
 
-    public async Task<ParkingSessionDto> RegisterManualEntryAsync(ManualEntryDto dto)
+    public async Task<ParkingSessionDto> RegisterManualEntryAsync(ManualEntryDto dto, string userId)
     {
         var gate = await unit.Gates.FindByIdAsync(dto.GateId)
                    ?? throw new GateNotFoundException(dto.GateId);
@@ -45,7 +38,8 @@ public class ParkingEmployeeService(IParkingUnitOfWork unit) : IParkingEmployeeS
             Vehicle = vehicle,
             GateName = gate.Name,
             EntryTime = DateTime.UtcNow,
-            IsActive = true
+            IsActive = true,
+            CreatedById = userId
         };
 
         await unit.Sessions.AddAsync(session);
@@ -53,13 +47,16 @@ public class ParkingEmployeeService(IParkingUnitOfWork unit) : IParkingEmployeeS
         return ToDto(session);
     }
 
-    public async Task<ParkingSessionDto> RegisterManualExitAsync(Guid sessionId, ManualExitDto dto)
+    public async Task<ParkingSessionDto> RegisterManualExitAsync(
+        Guid sessionId, ManualExitDto dto, string userId, bool isAdmin)
     {
         var session = await unit.Sessions.FindByIdAsync(sessionId)
-                      ?? throw new KeyNotFoundException($"Session {sessionId} not found.");
+                      ?? throw new KeyNotFoundException($"Sesja {sessionId} nie istnieje.");
+
+        EnsureCanModify(session, userId, isAdmin);
 
         if (!session.IsActive)
-            throw new InvalidOperationException("Session is already closed.");
+            throw new InvalidOperationException("Sesja jest już zamknięta.");
 
         var tariff = await unit.Tariffs.FindActiveAsync();
         var exitTime = DateTime.UtcNow;
@@ -80,13 +77,16 @@ public class ParkingEmployeeService(IParkingUnitOfWork unit) : IParkingEmployeeS
         return ToDto(session);
     }
 
-    public async Task<ParkingSessionDto> CloseSessionFreeAsync(Guid sessionId, string reason)
+    public async Task<ParkingSessionDto> CloseSessionFreeAsync(
+        Guid sessionId, string reason, string userId, bool isAdmin)
     {
         var session = await unit.Sessions.FindByIdAsync(sessionId)
-                      ?? throw new KeyNotFoundException($"Session {sessionId} not found.");
+                      ?? throw new KeyNotFoundException($"Sesja {sessionId} nie istnieje.");
+
+        EnsureCanModify(session, userId, isAdmin);
 
         if (!session.IsActive)
-            throw new InvalidOperationException("Session is already closed.");
+            throw new InvalidOperationException("Sesja jest już zamknięta.");
 
         session.ExitTime = DateTime.UtcNow;
         session.ParkingFee = 0;
@@ -99,26 +99,23 @@ public class ParkingEmployeeService(IParkingUnitOfWork unit) : IParkingEmployeeS
     public async Task<IEnumerable<ActiveSessionDto>> SearchByLicensePlateAsync(string plate)
     {
         var sessions = await unit.Sessions.FindHistoryByLicensePlateAsync(plate);
-        return sessions
-            .Where(s => s.IsActive)
-            .Select(s => new ActiveSessionDto(
-                s.Id,
-                s.Vehicle.LicensePlate,
-                s.Vehicle.Brand,
-                s.Vehicle.Color,
-                s.GateName,
-                s.EntryTime,
-                (int)(DateTime.UtcNow - s.EntryTime).TotalMinutes));
+        return sessions.Where(s => s.IsActive).Select(ToActiveDto);
     }
 
+    private static void EnsureCanModify(ParkingSession session, string userId, bool isAdmin)
+    {
+        if (isAdmin) return;
+        if (session.CreatedById == userId) return;
+        throw new ForbiddenAccessException(
+            "Sesję może modyfikować tylko pracownik, który ją utworzył, lub administrator.");
+    }
+
+    private static ActiveSessionDto ToActiveDto(ParkingSession s) => new(
+        s.Id, s.Vehicle.LicensePlate, s.Vehicle.Brand, s.Vehicle.Color,
+        s.GateName, s.EntryTime,
+        (int)(DateTime.UtcNow - s.EntryTime).TotalMinutes);
+
     private static ParkingSessionDto ToDto(ParkingSession s) => new(
-        s.Id,
-        s.Vehicle.LicensePlate,
-        s.Vehicle.Brand,
-        s.Vehicle.Color,
-        s.GateName,
-        s.EntryTime,
-        s.ExitTime,
-        s.ParkingFee,
-        s.IsActive);
+        s.Id, s.Vehicle.LicensePlate, s.Vehicle.Brand, s.Vehicle.Color,
+        s.GateName, s.EntryTime, s.ExitTime, s.ParkingFee, s.IsActive);
 }

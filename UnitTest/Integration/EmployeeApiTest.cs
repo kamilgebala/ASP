@@ -1,6 +1,5 @@
 using System.Net;
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using CoreApp.Dto;
 using WebApi;
 
@@ -13,23 +12,26 @@ public class EmployeeApiTest(ParkingAppTestFactory<Program> app)
 
     private static readonly Guid EntryGateId = Guid.Parse("10000000-0000-0000-0000-000000000001");
 
-    private async Task SetEmployeeTokenAsync()
+    private async Task LoginAsync(string email, string password)
     {
         var response = await _client.PostAsJsonAsync("/api/auth/login",
-            new LoginDto { Email = "jan.kowalski@parking.pl", Password = "Employee@123!" });
+            new LoginDto { Email = email, Password = password });
         var auth = await response.Content.ReadFromJsonAsync<AuthResponseDto>();
         _client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", auth!.AccessToken);
     }
 
-    private async Task SetDriverTokenAsync()
-    {
-        var response = await _client.PostAsJsonAsync("/api/auth/login",
-            new LoginDto { Email = "kierowca1@parking.pl", Password = "Driver@123!" });
-        var auth = await response.Content.ReadFromJsonAsync<AuthResponseDto>();
-        _client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", auth!.AccessToken);
-    }
+    private Task LoginAsEmployeeJanAsync() =>
+        LoginAsync("jan.kowalski@parking.pl", "Employee@123!");
+
+    private Task LoginAsEmployeeAnnaAsync() =>
+        LoginAsync("anna.nowak@parking.pl", "Employee@123!");
+
+    private Task LoginAsAdminAsync() =>
+        LoginAsync("admin@parking.pl", "Admin@123!");
+
+    private Task LoginAsDriverAsync() =>
+        LoginAsync("piotr.kierowca@parking.pl", "Driver@123!");
 
     [Fact]
     public async Task GetActiveSessions_WithoutToken_Returns401()
@@ -42,7 +44,7 @@ public class EmployeeApiTest(ParkingAppTestFactory<Program> app)
     [Fact]
     public async Task GetActiveSessions_WithEmployeeToken_Returns200WithList()
     {
-        await SetEmployeeTokenAsync();
+        await LoginAsEmployeeJanAsync();
         var response = await _client.GetAsync("/api/employee/sessions/active");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var sessions = await response.Content.ReadFromJsonAsync<List<ActiveSessionDto>>();
@@ -52,13 +54,13 @@ public class EmployeeApiTest(ParkingAppTestFactory<Program> app)
     [Fact]
     public async Task RegisterManualEntry_WithEmployeeToken_Returns201WithSession()
     {
-        await SetEmployeeTokenAsync();
-        var dto = new ManualEntryDto("KR12345", "Toyota", "Red", EntryGateId);
+        await LoginAsEmployeeJanAsync();
+        var dto = new ManualEntryDto("ZZ12345", "Toyota", "Czerwony", EntryGateId);
         var response = await _client.PostAsJsonAsync("/api/employee/sessions/entry", dto);
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var session = await response.Content.ReadFromJsonAsync<ParkingSessionDto>();
         Assert.NotNull(session);
-        Assert.Equal("KR12345", session.LicensePlate);
+        Assert.Equal("ZZ12345", session.LicensePlate);
         Assert.True(session.IsActive);
         Assert.Null(session.ExitTime);
     }
@@ -66,24 +68,24 @@ public class EmployeeApiTest(ParkingAppTestFactory<Program> app)
     [Fact]
     public async Task GetActiveSessions_AfterEntry_ContainsNewSession()
     {
-        await SetEmployeeTokenAsync();
+        await LoginAsEmployeeJanAsync();
 
         await _client.PostAsJsonAsync("/api/employee/sessions/entry",
-            new ManualEntryDto("KR99999", "BMW", "Blue", EntryGateId));
+            new ManualEntryDto("ZZ99999", "BMW", "Niebieski", EntryGateId));
 
         var response = await _client.GetAsync("/api/employee/sessions/active");
         var sessions = await response.Content.ReadFromJsonAsync<List<ActiveSessionDto>>();
         Assert.NotNull(sessions);
-        Assert.Contains(sessions, s => s.LicensePlate == "KR99999");
+        Assert.Contains(sessions, s => s.LicensePlate == "ZZ99999");
     }
 
     [Fact]
     public async Task SearchByLicensePlate_ExistingPlate_ReturnsSession()
     {
-        await SetEmployeeTokenAsync();
-        const string plate = "KR55555";
+        await LoginAsEmployeeJanAsync();
+        const string plate = "ZZ55555";
         await _client.PostAsJsonAsync("/api/employee/sessions/entry",
-            new ManualEntryDto(plate, "Audi", "Black", EntryGateId));
+            new ManualEntryDto(plate, "Audi", "Czarny", EntryGateId));
 
         var response = await _client.GetAsync($"/api/employee/sessions/search?plate={plate}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -96,7 +98,7 @@ public class EmployeeApiTest(ParkingAppTestFactory<Program> app)
     [Fact]
     public async Task SearchByLicensePlate_NonExistingPlate_ReturnsEmptyList()
     {
-        await SetEmployeeTokenAsync();
+        await LoginAsEmployeeJanAsync();
         var response = await _client.GetAsync("/api/employee/sessions/search?plate=NIEISTNIEJACA");
         var sessions = await response.Content.ReadFromJsonAsync<List<ActiveSessionDto>>();
         Assert.NotNull(sessions);
@@ -106,9 +108,9 @@ public class EmployeeApiTest(ParkingAppTestFactory<Program> app)
     [Fact]
     public async Task RegisterManualExit_Returns200WithFee()
     {
-        await SetEmployeeTokenAsync();
+        await LoginAsEmployeeJanAsync();
         var entryResponse = await _client.PostAsJsonAsync("/api/employee/sessions/entry",
-            new ManualEntryDto("KR77777", "Ford", "White", EntryGateId));
+            new ManualEntryDto("ZZ77777", "Ford", "Biały", EntryGateId));
         var session = await entryResponse.Content.ReadFromJsonAsync<ParkingSessionDto>();
 
         var exitResponse = await _client.PostAsJsonAsync(
@@ -126,9 +128,9 @@ public class EmployeeApiTest(ParkingAppTestFactory<Program> app)
     [Fact]
     public async Task CloseSessionFree_Returns200WithZeroFee()
     {
-        await SetEmployeeTokenAsync();
+        await LoginAsEmployeeJanAsync();
         var entryResponse = await _client.PostAsJsonAsync("/api/employee/sessions/entry",
-            new ManualEntryDto("KR88888", "Skoda", "Green", EntryGateId));
+            new ManualEntryDto("ZZ88888", "Skoda", "Zielony", EntryGateId));
         var session = await entryResponse.Content.ReadFromJsonAsync<ParkingSessionDto>();
 
         var closeResponse = await _client.PostAsJsonAsync(
@@ -143,12 +145,12 @@ public class EmployeeApiTest(ParkingAppTestFactory<Program> app)
     }
 
     [Fact]
-    public async Task GetActiveSessions_AfterClosingAll_ReturnsEmptyList()
+    public async Task GetActiveSessions_AfterClosingAll_ReturnsEmptyForThatPlate()
     {
-        await SetEmployeeTokenAsync();
-        const string plate = "KR11111";
+        await LoginAsEmployeeJanAsync();
+        const string plate = "ZZ11111";
         var entryResponse = await _client.PostAsJsonAsync("/api/employee/sessions/entry",
-            new ManualEntryDto(plate, "VW", "Gray", EntryGateId));
+            new ManualEntryDto(plate, "VW", "Szary", EntryGateId));
         var session = await entryResponse.Content.ReadFromJsonAsync<ParkingSessionDto>();
 
         await _client.PostAsJsonAsync(
@@ -164,9 +166,62 @@ public class EmployeeApiTest(ParkingAppTestFactory<Program> app)
     [Fact]
     public async Task RegisterManualEntry_WithDriverToken_Returns403()
     {
-        await SetDriverTokenAsync();
-        var dto = new ManualEntryDto("KR00000", "Honda", "Yellow", EntryGateId);
+        await LoginAsDriverAsync();
+        var dto = new ManualEntryDto("ZZ00000", "Honda", "Żółty", EntryGateId);
         var response = await _client.PostAsJsonAsync("/api/employee/sessions/entry", dto);
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CloseSessionFree_DifferentEmployeeThanAuthor_Returns403()
+    {
+        await LoginAsEmployeeJanAsync();
+        var entry = await _client.PostAsJsonAsync("/api/employee/sessions/entry",
+            new ManualEntryDto("ZZ22222", "Renault", "Biały", EntryGateId));
+        var session = await entry.Content.ReadFromJsonAsync<ParkingSessionDto>();
+
+        await LoginAsEmployeeAnnaAsync();
+        var response = await _client.PostAsJsonAsync(
+            $"/api/employee/sessions/{session!.SessionId}/close-free",
+            "Test cudza sesja");
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task CloseSessionFree_AdminClosesAnyoneSession_Returns200()
+    {
+        await LoginAsEmployeeJanAsync();
+        var entry = await _client.PostAsJsonAsync("/api/employee/sessions/entry",
+            new ManualEntryDto("ZZ33333", "Peugeot", "Czarny", EntryGateId));
+        var session = await entry.Content.ReadFromJsonAsync<ParkingSessionDto>();
+
+        await LoginAsAdminAsync();
+        var response = await _client.PostAsJsonAsync(
+            $"/api/employee/sessions/{session!.SessionId}/close-free",
+            "Admin override");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RegisterManualExit_SessionNotFound_Returns404()
+    {
+        await LoginAsEmployeeJanAsync();
+        var response = await _client.PostAsJsonAsync(
+            $"/api/employee/sessions/{Guid.NewGuid()}/exit",
+            new ManualExitDto(EntryGateId));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RegisterManualEntry_GateNotFound_Returns404()
+    {
+        await LoginAsEmployeeJanAsync();
+        var response = await _client.PostAsJsonAsync("/api/employee/sessions/entry",
+            new ManualEntryDto("ZZ44444", "Mazda", "Czerwony", Guid.NewGuid()));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 }

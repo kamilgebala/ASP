@@ -13,4 +13,5 @@ public class CameraCapture : EntityBase
     public DateTime CapturedAt { get; set; }
     public string ImagePath { get; set; } = string.Empty;
     public CaptureType Type { get; set; }
+    public string? CreatedById { get; set; }
 }

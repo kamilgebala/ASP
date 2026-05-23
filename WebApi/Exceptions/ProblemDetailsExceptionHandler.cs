@@ -1,6 +1,5 @@
 using CoreApp.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
 
 namespace WebApi.Exceptions;
@@ -14,18 +13,25 @@ public class ProblemDetailsExceptionHandler(
         Exception exception,
         CancellationToken cancellationToken)
     {
-        if (exception is GateNotFoundException or CaptureNotFoundException)
+        var (status, title) = exception switch
         {
-            logger.LogInformation("Exception '{Message}' handled!", exception.Message);
-            var problem = factory.CreateProblemDetails(
-                context,
-                StatusCodes.Status404NotFound,
-                "Not found",
-                detail: exception.Message);
-            context.Response.StatusCode = StatusCodes.Status404NotFound;
-            await context.Response.WriteAsJsonAsync(problem, cancellationToken);
-            return true;
-        }
-        return false;
+            GateNotFoundException or CaptureNotFoundException or KeyNotFoundException
+                => (StatusCodes.Status404NotFound, "Not found"),
+            ForbiddenAccessException
+                => (StatusCodes.Status403Forbidden, "Forbidden"),
+            InvalidOperationException
+                => (StatusCodes.Status400BadRequest, "Invalid operation"),
+            _ => (0, string.Empty)
+        };
+
+        if (status == 0) return false;
+
+        logger.LogInformation("Exception '{Message}' handled with status {Status}.",
+            exception.Message, status);
+
+        var problem = factory.CreateProblemDetails(context, status, title, detail: exception.Message);
+        context.Response.StatusCode = status;
+        await context.Response.WriteAsJsonAsync(problem, cancellationToken);
+        return true;
     }
 }

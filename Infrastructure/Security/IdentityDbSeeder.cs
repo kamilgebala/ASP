@@ -13,6 +13,17 @@ public class IdentityDbSeeder(
 {
     public int Order => 1;
 
+    public static class UserIds
+    {
+        public const string Admin = "F5BADE14-6CC8-42A2-9A44-9842DA2D9280";
+        public const string AdminAnna = "BA111111-0000-0000-0000-000000000001";
+        public const string EmployeeJan = "93A7FFDD-057F-4021-9C68-FE06951FFA65";
+        public const string EmployeeAnna = "3D4769E2-1C75-43E1-A5BB-1F71C68E9F57";
+        public const string EmployeeMaria = "C0BB1234-AAAA-BBBB-CCCC-DDDDEEEEFFFF";
+        public const string DriverPiotr = "0E136AB2-1A6A-4A16-938D-84DFB0F64BBA";
+        public const string DriverMaria = "76B253D6-C16C-470A-943C-92F314A090F2";
+    }
+
     public async Task SeedAsync()
     {
         await SeedRolesAsync();
@@ -23,9 +34,9 @@ public class IdentityDbSeeder(
     {
         var roles = new[]
         {
-            new AppRole(UserRole.Administrator.ToString(), "Pełny dostęp do systemu."),
-            new AppRole(UserRole.ParkingEmployee.ToString(), "Pracownik parkingu."),
-            new AppRole(UserRole.Driver.ToString(), "Kierowca.")
+            new AppRole(UserRole.Administrator.ToString(), "Pełny dostęp do systemu parkingu."),
+            new AppRole(UserRole.ParkingEmployee.ToString(), "Pracownik parkingu – obsługa wjazdów i wyjazdów."),
+            new AppRole(UserRole.Driver.ToString(), "Kierowca korzystający z parkingu.")
         };
 
         foreach (var role in roles)
@@ -42,16 +53,20 @@ public class IdentityDbSeeder(
     {
         var users = new[]
         {
-            new SeedUser("F5BADE14-6CC8-42A2-9A44-9842DA2D9280", "admin@parking.pl",
-                "Adam", "Administrator", "IT", "Admin@123!", UserRole.Administrator),
-            new SeedUser("93A7FFDD-057F-4021-9C68-FE06951FFA65", "jan.kowalski@parking.pl",
-                "Jan", "Kowalski", "Parking", "Employee@123!", UserRole.ParkingEmployee),
-            new SeedUser("3D4769E2-1C75-43E1-A5BB-1F71C68E9F57", "anna.nowak@parking.pl",
-                "Anna", "Nowak", "Parking", "Employee@123!", UserRole.ParkingEmployee),
-            new SeedUser("0E136AB2-1A6A-4A16-938D-84DFB0F64BBA", "kierowca1@parking.pl",
-                "Piotr", "Wisniewski", "N/A", "Driver@123!", UserRole.Driver),
-            new SeedUser("76B253D6-C16C-470A-943C-92F314A090F2", "kierowca2@parking.pl",
-                "Maria", "Wojcik", "N/A", "Driver@123!", UserRole.Driver)
+            new SeedUser(UserIds.Admin, "admin@parking.pl",
+                "Adam", "Administrator", "Administracja", "Admin@123!", UserRole.Administrator),
+            new SeedUser(UserIds.AdminAnna, "anna.administrator@parking.pl",
+                "Anna", "Lewandowska", "Administracja", "Admin@123!", UserRole.Administrator),
+            new SeedUser(UserIds.EmployeeJan, "jan.kowalski@parking.pl",
+                "Jan", "Kowalski", "Obsługa parkingu", "Employee@123!", UserRole.ParkingEmployee),
+            new SeedUser(UserIds.EmployeeAnna, "anna.nowak@parking.pl",
+                "Anna", "Nowak", "Obsługa parkingu", "Employee@123!", UserRole.ParkingEmployee),
+            new SeedUser(UserIds.EmployeeMaria, "maria.wojcik@parking.pl",
+                "Maria", "Wójcik", "Obsługa parkingu", "Employee@123!", UserRole.ParkingEmployee),
+            new SeedUser(UserIds.DriverPiotr, "piotr.kierowca@parking.pl",
+                "Piotr", "Wiśniewski", "Klient", "Driver@123!", UserRole.Driver),
+            new SeedUser(UserIds.DriverMaria, "marta.kierowca@parking.pl",
+                "Marta", "Kamińska", "Klient", "Driver@123!", UserRole.Driver)
         };
 
         foreach (var seedUser in users)
@@ -61,6 +76,8 @@ public class IdentityDbSeeder(
     private async Task CreateUserAsync(SeedUser s)
     {
         if (await userManager.FindByEmailAsync(s.Email) is not null) return;
+
+        if (await userManager.FindByIdAsync(s.Id) is not null) return;
 
         var user = new AppUser
         {
@@ -73,21 +90,20 @@ public class IdentityDbSeeder(
             LastName = s.LastName,
             FullName = $"{s.FirstName} {s.LastName}",
             Department = s.Department,
-            Status = SystemUserStatus.Inactive,
+            Status = SystemUserStatus.Active,
             LockoutEnabled = true
         };
-        user.Activate();
 
         var result = await userManager.CreateAsync(user, s.Password);
         if (!result.Succeeded)
         {
-            logger.LogError("Błąd tworzenia {Email}: {Errors}", s.Email,
+            logger.LogError("Błąd tworzenia użytkownika {Email}: {Errors}", s.Email,
                 string.Join("; ", result.Errors.Select(e => e.Description)));
             return;
         }
 
         await userManager.AddToRoleAsync(user, s.Role.ToString());
-        logger.LogInformation("Utworzono {Email} z rolą {Role}.", s.Email, s.Role);
+        logger.LogInformation("Utworzono użytkownika {Email} z rolą {Role}.", s.Email, s.Role);
     }
 }
 

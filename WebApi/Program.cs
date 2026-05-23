@@ -2,6 +2,7 @@ using CoreApp.Module;
 using CoreApp.Services;
 using Infrastructure;
 using Infrastructure.Security;
+using Microsoft.EntityFrameworkCore;
 using WebApi.Exceptions;
 
 namespace WebApi;
@@ -28,7 +29,7 @@ public partial class Program
             app.MapOpenApi();
             using var scope = app.Services.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<Infrastructure.EntityFramework.Context.ParkingDbContext>();
-            context.Database.EnsureCreated();
+            await context.Database.MigrateAsync();
             var seeders = scope.ServiceProvider
                 .GetServices<IDataSeeder>()
                 .OrderBy(s => s.Order);

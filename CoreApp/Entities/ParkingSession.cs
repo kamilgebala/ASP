@@ -9,4 +9,5 @@ public class ParkingSession : EntityBase
     public DateTime? ExitTime { get; set; }
     public decimal? ParkingFee { get; set; }
     public bool IsActive { get; set; }
+    public string? CreatedById { get; set; }
 }

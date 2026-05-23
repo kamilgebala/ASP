@@ -54,7 +54,7 @@ public class ParkingGateService(IParkingUnitOfWork unit) : IParkingGateService
         return (ParkingGateDto)entity;
     }
 
-    public async Task<CameraCapture> AddCaptureAsync(Guid gateId, CreateCameraCaptureDto dto)
+    public async Task<CameraCaptureDto> AddCaptureAsync(Guid gateId, CreateCameraCaptureDto dto, string userId)
     {
         var gate = await unit.Gates.FindByIdWithCapturesAsync(gateId)
                    ?? throw new GateNotFoundException(gateId);
@@ -69,22 +69,28 @@ public class ParkingGateService(IParkingUnitOfWork unit) : IParkingGateService
             DetectedColor = dto.DetectedColor,
             Type = dto.Type,
             ImagePath = dto.ImagePath,
-            CapturedAt = DateTime.UtcNow
+            CapturedAt = DateTime.UtcNow,
+            CreatedById = userId
         };
 
         gate.CameraCaptures.Add(capture);
         await unit.Captures.AddAsync(capture);
         await unit.SaveChangesAsync();
-        return capture;
+        return new CameraCaptureDto(capture.Id, capture.LicensePlate, capture.DetectedBrand,
+            capture.DetectedColor, capture.Type, capture.ImagePath, capture.CapturedAt);
     }
 
-    public async Task RemoveCaptureAsync(Guid gateId, Guid captureId)
+    public async Task RemoveCaptureAsync(Guid gateId, Guid captureId, string userId, bool isAdmin)
     {
         var gate = await unit.Gates.FindByIdWithCapturesAsync(gateId)
                    ?? throw new GateNotFoundException(gateId);
 
         var capture = gate.CameraCaptures.FirstOrDefault(c => c.Id == captureId)
                       ?? throw new CaptureNotFoundException(captureId);
+
+        if (!isAdmin && capture.CreatedById != userId)
+            throw new ForbiddenAccessException(
+                "Zdjęcie może usunąć tylko jego autor lub administrator.");
 
         gate.CameraCaptures.Remove(capture);
         await unit.Captures.RemoveByIdAsync(captureId);

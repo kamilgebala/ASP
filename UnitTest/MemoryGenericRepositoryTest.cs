@@ -13,7 +13,7 @@ public class MemoryGenericRepositoryTest
         Id = Guid.NewGuid(),
         LicensePlate = plate,
         Brand = "Toyota",
-        Color = "Red"
+        Color = "Czerwony"
     };
     
     [Fact]
@@ -114,11 +114,11 @@ public class MemoryGenericRepositoryTest
         var vehicle = MakeVehicle();
         await _repository.AddAsync(vehicle);
 
-        vehicle.Color = "Blue";
+        vehicle.Color = "Niebieski";
         await _repository.UpdateAsync(vehicle);
 
         var updated = await _repository.FindByIdAsync(vehicle.Id);
-        Assert.Equal("Blue", updated?.Color);
+        Assert.Equal("Niebieski", updated?.Color);
     }
 
     [Fact]

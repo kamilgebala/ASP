@@ -63,6 +63,8 @@ public class ParkingDbContext : IdentityDbContext<AppUser, AppRole, string>
             e.Property(c => c.DetectedColor).HasMaxLength(30);
             e.Property(c => c.GateName).HasMaxLength(50);
             e.Property(c => c.Type).HasConversion<string>();
+            e.Property(c => c.CreatedById).HasMaxLength(450);
+            e.HasIndex(c => c.CreatedById);
         });
 
         builder.Entity<CameraCapture>()
@@ -74,6 +76,8 @@ public class ParkingDbContext : IdentityDbContext<AppUser, AppRole, string>
         builder.Entity<ParkingSession>(e =>
         {
             e.Property(s => s.GateName).HasMaxLength(50);
+            e.Property(s => s.CreatedById).HasMaxLength(450);
+            e.HasIndex(s => s.CreatedById);
         });
 
         builder.Entity<ParkingSession>()
