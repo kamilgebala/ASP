@@ -1,6 +1,6 @@
 # Parking API – projekt zaliczeniowy z laboratoriów ASP.NET
 
-Backendowy projekt zaliczeniowy realizujący całość wymagań z laboratoriów oraz indywidualne **Zadanie 23** (API pracownika parkingu). Zbudowany jako modularny monolit w architekturze czystej — z osobnymi warstwami domeny, infrastruktury, prezentacji (REST API) i testów.
+Backendowy projekt zaliczeniowy realizujący całość wymagań z laboratoriów oraz API pracownika parkingu. Zbudowany jako modularny monolit w architekturze czystej — z osobnymi warstwami domeny, infrastruktury, prezentacji (REST API) i testów.
 
 ## Autor
 
@@ -43,42 +43,6 @@ Backend systemu parkingu zrealizowany w **czystej architekturze** (`CoreApp` / `
 | JWT (`Microsoft.AspNetCore.Authentication.JwtBearer`) | 9.0 |
 | FluentValidation | – |
 | xUnit | 2.9 |
-
-## Struktura projektu
-
-```
-ASP/
-├─ CoreApp/                    # warstwa domeny: encje, DTO, serwisy, interfejsy repozytoriów
-│  ├─ Authorization/           # AppPolicies
-│  ├─ Dto/
-│  ├─ Entities/
-│  ├─ Enums/
-│  ├─ Exceptions/
-│  ├─ Repositories/            # interfejsy + PagedResult
-│  ├─ Services/                # IParkingGateService, IParkingEmployeeService, IAuthService, IDataSeeder
-│  ├─ Users/                   # ISystemUser
-│  └─ Validators/              # FluentValidation
-├─ Infrastructure/             # warstwa danych (EF + Memory)
-│  ├─ EntityFramework/
-│  │  ├─ Context/              # ParkingDbContext
-│  │  ├─ Entities/             # AppUser, AppRole
-│  │  ├─ Repositories/         # EfGenericRepository i implementacje
-│  │  └─ UnitOfWork/
-│  ├─ Memory/                  # implementacje in-memory (testy jednostkowe)
-│  ├─ Migrations/
-│  ├─ Security/                # JwtSettings, AuthService, IdentityDbSeeder, ParkingDataSeeder, RefreshToken
-│  ├─ Services/                # MemoryParkingGateService
-│  └─ ParkingInfrastructureModule.cs
-├─ WebApi/                     # warstwa prezentacji
-│  ├─ Controllers/             # Auth, Gates, ParkingEmployee
-│  ├─ Exceptions/              # ProblemDetailsExceptionHandler
-│  └─ Program.cs
-└─ UnitTest/
-   ├─ Integration/             # AuthApiTest, GatesApiTest, EmployeeApiTest, ParkingAppTestFactory
-   ├─ Services/                # ParkingEmployeeServiceTest, ParkingGateServiceTest
-   └─ MemoryGenericRepositoryTest.cs
-
-```
 
 ## Uruchomienie projektu
 
@@ -164,25 +128,4 @@ W katalogu [`WebApi/`](./WebApi) znajduje się plik [`WebApi.http`](./WebApi/Web
 
 ```bash
 dotnet test
-```
-
-Testy integracyjne podmieniają `ParkingDbContext` na in-memory SQLite (otwarte połączenie utrzymywane przez fixture), więc seedery wykonują się w pełni i można logować się na seedowanych użytkowników.
-
-## Konfiguracja
-
-Plik [`WebApi/appsettings.json`](./WebApi/appsettings.json):
-
-```json
-{
-  "ConnectionStrings": {
-    "ParkingDb": "Data Source=parking.db"
-  },
-  "Jwt": {
-    "Issuer": "ParkingApi",
-    "Audience": "ParkingClient",
-    "SecretKey": "...",
-    "ExpiryInMinutes": 60,
-    "RefreshTokenDays": 7
-  }
-}
 ```
